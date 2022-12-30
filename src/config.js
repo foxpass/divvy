@@ -178,11 +178,6 @@ class Config {
     const rawConfig = ini.parse(fs.readFileSync(filename, 'utf-8'));
     const config = new Config();
 
-    if (ZK_ENABLED_FOR_AUX_RULES) {
-      config.zookeeperClient = config.createClient()
-      config.getData(config.zookeeperClient, config);
-    }
-
     for (const rulegroupString of Object.keys(rawConfig)) {
       const rulegroupConfig = rawConfig[rulegroupString];
 

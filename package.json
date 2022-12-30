@@ -15,7 +15,7 @@
   },
   "scripts": {
     "benchmark": "node ./bin/benchmark.js",
-    "start": "node index.js examples/example-config.ini",
+    "start": "node index.js examples/example-config.json",
     "test": "mocha --recursive tests/"
   },
   "author": "mike wakerly <mikey@usebutton.com>",

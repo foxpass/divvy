@@ -32,8 +32,8 @@ function isGlobValue(v) {
  * Zookeeper related settings
  */
 
-const ZK_ENABLED_FOR_AUX_RULES = process.env.ZK_ENABLED_FOR_AUX_RULES || true
-const ZK_HOSTS_FOR_AUX_RULES = process.env.ZK_HOSTS_FOR_AUX_RULES || 'host.docker.internal:2199';
+const ZK_ENABLED_FOR_AUX_RULES = process.env.ZK_ENABLED_FOR_AUX_RULES
+const ZK_HOSTS_FOR_AUX_RULES = process.env.ZK_HOSTS_FOR_AUX_RULES || 'localhost:2199';
 const ZK_AUX_RULES_PATH = process.env.ZK_AUX_RULES_PATH || '/ratelimiter/rules';
 
 class Config {

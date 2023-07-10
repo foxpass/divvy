@@ -5,6 +5,8 @@ const path = require('path');
 
 const Utils = require('./utils');
 const Constants = require('./constants');
+const zookeeper = require('node-zookeeper-client');
+
 
 /**
  * In support of globbing, we turn the operation value into
@@ -26,6 +28,14 @@ function isGlobValue(v) {
   return v.match(/\*/);
 }
 
+/**
+ * Zookeeper related settings
+ */
+
+const ZK_ENABLED_FOR_AUX_RULES = process.env.ZK_ENABLED_FOR_AUX_RULES
+const ZK_HOSTS_FOR_AUX_RULES = process.env.ZK_HOSTS_FOR_AUX_RULES || 'localhost:2199';
+const ZK_AUX_RULES_PATH = process.env.ZK_AUX_RULES_PATH || '/ratelimiter/rules';
+
 class Config {
   constructor() {
     this.rules = [];
@@ -44,9 +54,92 @@ class Config {
     return new RegExp(`^${ruleValue}`);
   }
 
+  createClient() {
+    var client = zookeeper.createClient(ZK_HOSTS_FOR_AUX_RULES);
+    const data = Buffer.from('[]')
+    client.once('connected', function () {
+        console.log('Connected to the zk server to listen to dynamic rules.');
+    });
+
+    client.connect();
+    return client
+  }
+
+  getData(client, config) {
+    const path = ZK_AUX_RULES_PATH;
+    client.getData(
+        path,
+        function (event) {
+            console.log('Got event: %s', event);
+            config.getData(client, config);
+        },
+        function (error, data, stat) {
+            if (error) {
+                console.log('Error occurred when getting data: %s.', error);
+                return;
+            }
+
+            console.log(
+                'Node: %s has data: %s, version: %d',
+                path,
+                data ? data.toString() : undefined,
+                stat.version
+            );
+
+            config.processNewRules(data, config)
+        }
+    );
+  }
+
+  processNewRules(rules, config) {
+    console.log("processing new rules", rules.toString())
+    console.log("file name is", process.argv[2])
+
+
+    if (path.extname(process.argv[2]) == '.ini') {
+      console.log("dynamic config is not supported for ini files.")
+      return
+    }
+
+    const rawConfig = JSON.parse(fs.readFileSync(process.argv[2], 'utf-8'));
+
+    config.rules = [];
+    config.ruleLabels = new Set();
+
+    // push the rules read from zookeeper
+    // These rules get a higher preference over the ones in the file
+    // and hence pushed to the top
+    (JSON.parse(rules.toString())).forEach(function (rule) {
+      rawConfig.overrides.unshift(rule)
+    })
+
+    if (typeof rawConfig.default === 'object') {
+      rawConfig.overrides.push(rawConfig.default);
+    }
+
+    (rawConfig.overrides || []).forEach(function (rule) {
+      config.addRule({
+        operation: Utils.stringifyObjectValues(rule.operation),
+        creditLimit: rule.creditLimit,
+        resetSeconds: rule.resetSeconds,
+        actorField: rule.actorField,
+        matchPolicy: rule.matchPolicy,
+        label: rule.label,
+        comment: rule.comment,
+      });
+    });
+
+    config.validate();
+  }
+
   static fromJsonFile(filename) {
     const rawConfig = JSON.parse(fs.readFileSync(filename, 'utf-8'));
     const config = new Config();
+
+    if (ZK_ENABLED_FOR_AUX_RULES === 'true') {
+      config.zookeeperClient = config.createClient()
+      config.getData(config.zookeeperClient, config);
+    }
 
     // Add default after other rules since it has lowest precedence
     if (typeof rawConfig.default === 'object') {

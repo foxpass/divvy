@@ -15,7 +15,7 @@
   },
   "scripts": {
     "benchmark": "node ./bin/benchmark.js",
-    "start": "node index.js examples/example-config.ini",
+    "start": "node index.js examples/example-config.json",
     "test": "mocha --recursive tests/"
   },
   "author": "mike wakerly <mikey@usebutton.com>",
@@ -37,6 +37,7 @@
     "ini": "^1.3.4",
     "prom-client": "^11.5.3",
     "redis": "^2.8.0",
-    "statsd-client": "^0.4.4"
+    "statsd-client": "^0.4.4",
+    "node-zookeeper-client": "^1.1.3"
   }
 }
